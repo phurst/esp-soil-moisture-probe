@@ -22,7 +22,7 @@
 #include "lwip/sys.h"
 #include "inter_task_messaging.h"
 #include "led_component.h"
-#include "wifi_component.h"
+#include "sensor_component.h"
 
 /* The examples use WiFi configuration that you can set via project configuration menu
 
@@ -65,11 +65,11 @@ int myInt = 123;
 
 QueueHandle_t connectionStateMessageQueue;
 TaskHandle_t ledDisplayTaskHandle = NULL;
-TaskHandle_t wifiTaskHandle = NULL;
+TaskHandle_t sensorTaskHandle = NULL;
 
-// static void wifi_task(void* pvParameters) {
-//     wifi_task_function(pvParameters);
-// }
+static void sensor_task(void* pvParameters) {
+    sensor_task_function(pvParameters);
+}
 
 static void led_display_task(void* pvParameters) {
     led_display_task_function(pvParameters);
@@ -93,5 +93,5 @@ void app_main(void) {
     }
 
     xTaskCreate(&led_display_task, "led_display_task", 8192, NULL, 5, &ledDisplayTaskHandle);
-    // xTaskCreate(&wifi_task, "wifi_task", 8192, NULL, 5, &wifiTaskHandle);
+    xTaskCreate(&sensor_task, "sensor_task", 8192, NULL, 5, &sensorTaskHandle);
 }

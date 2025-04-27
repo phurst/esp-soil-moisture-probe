@@ -1,5 +1,5 @@
 #include "freertos/task.h"
 
-void wifi_task_function(
+void sensor_task_function(
   void* pvParameters
 );
