@@ -31,6 +31,7 @@ void sensor_init(void) {
   printf("\nsensort init START\n");
   // gpio_dump_io_configuration(stdout, SOC_GPIO_VALID_GPIO_MASK);
   gpio_dump_io_configuration(stdout, (1ULL << 0) | (1ULL << 1) | (1ULL << 2));
+
   printf("\nsensort init DONE\n");
 }
 

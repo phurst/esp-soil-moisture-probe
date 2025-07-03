@@ -1,4 +1,4 @@
-# esp-siol-moisture-probe
+# esp-soil-moisture-probe
 Test connection to a soil moisture probe
 
 # Setup
