@@ -26,5 +26,9 @@ Use the Windows Device Manager to determine which COM port the SparkFun-ThingPlu
 
 # Operation
 
-The SparkFun-ThingPlus-ESP32-C6 repeatedly blinks the LED.
+The sensor component should use code from the One-shot read example.
+A sender component (TBD) should use a network to dispatch samples and track the health of the network connection.
+The LED component should provide an indication of the health of the system.
+  Is it reading samples from the sensor?
+  Are the samples being sent somewhere successfully?
 
