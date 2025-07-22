@@ -2,7 +2,8 @@
   "idf.pythonInstallPath": "c:\\ESP\\.esspressif\\tools\\idf-python\\3.11.2\\python.exe",
   "files.associations": {
     "stdio.h": "c",
-    "string.h": "c"
+    "string.h": "c",
+    "adc_cali_scheme.h": "c"
   },
   "C_Cpp.intelliSenseEngine": "Tag Parser",
   "idf.portWin": "COM4",
