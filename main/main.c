@@ -23,6 +23,7 @@
 #include "inter_task_messaging.h"
 #include "led_component.h"
 #include "sensor_component.h"
+#include "mqqt_component.h"
 
 /* The examples use WiFi configuration that you can set via project configuration menu
 
@@ -66,6 +67,7 @@ int myInt = 123;
 QueueHandle_t connectionStateMessageQueue;
 TaskHandle_t ledDisplayTaskHandle = NULL;
 TaskHandle_t sensorTaskHandle = NULL;
+TaskHandle_t mqqtTaskHandle = NULL;
 
 static void sensor_task(void* pvParameters) {
     sensor_task_function(pvParameters);
@@ -75,7 +77,13 @@ static void led_display_task(void* pvParameters) {
     led_display_task_function(pvParameters);
 }
 
+static void mqqt_task(void* pvParameters) {
+    mqqt_task_function(pvParameters);
+}
+
 void app_main(void) {
+        esp_log_level_set("*", ESP_LOG_INFO);
+
     //Initialize NVS
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -94,4 +102,5 @@ void app_main(void) {
 
     xTaskCreate(&led_display_task, "led_display_task", 8192, NULL, 5, &ledDisplayTaskHandle);
     xTaskCreate(&sensor_task, "sensor_task", 8192, NULL, 5, &sensorTaskHandle);
+    xTaskCreate(&mqqt_task, "mqqt_task", 8192, NULL, 5, &mqqtTaskHandle);
 }
