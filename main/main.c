@@ -1,10 +1,9 @@
-/* WiFi station Example
+/* esp-soil-moisture-probe
 
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
+   NOTES
+   -----
 
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
+   1. ESP_LOGI does not apparently work. Use printf instead
 */
 #include <string.h>
 #include "freertos/FreeRTOS.h"
@@ -23,7 +22,7 @@
 #include "inter_task_messaging.h"
 #include "led_component.h"
 #include "sensor_component.h"
-#include "mqqt_component.h"
+#include "mqtt_component.h"
 
 /* The examples use WiFi configuration that you can set via project configuration menu
 
@@ -62,12 +61,14 @@
 #define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WAPI_PSK
 #endif
 
+static const char *TAG = "MAIN";
+
 int myInt = 123;
 
 QueueHandle_t connectionStateMessageQueue;
 TaskHandle_t ledDisplayTaskHandle = NULL;
 TaskHandle_t sensorTaskHandle = NULL;
-TaskHandle_t mqqtTaskHandle = NULL;
+TaskHandle_t mqttTaskHandle = NULL;
 
 static void sensor_task(void* pvParameters) {
     sensor_task_function(pvParameters);
@@ -77,12 +78,12 @@ static void led_display_task(void* pvParameters) {
     led_display_task_function(pvParameters);
 }
 
-static void mqqt_task(void* pvParameters) {
-    mqqt_task_function(pvParameters);
+static void mqtt_task(void* pvParameters) {
+    mqtt_task_function(pvParameters);
 }
 
 void app_main(void) {
-        esp_log_level_set("*", ESP_LOG_INFO);
+    printf("\n------------------------------------------ START! ----------------------------------- %d (%d)\n", esp_log_get_default_level(), esp_log_level_get(TAG));
 
     //Initialize NVS
     esp_err_t ret = nvs_flash_init();
@@ -97,10 +98,10 @@ void app_main(void) {
     msg.isConnected = false;
     if (xQueueSend(connectionStateMessageQueue, (void*)&msg, 0) != pdPASS) {
         printf("\nERROR - MAIN Can't send to message queue");
-        return;
+        ESP_ERROR_CHECK(ESP_FAIL);
     }
 
     xTaskCreate(&led_display_task, "led_display_task", 8192, NULL, 5, &ledDisplayTaskHandle);
     xTaskCreate(&sensor_task, "sensor_task", 8192, NULL, 5, &sensorTaskHandle);
-    xTaskCreate(&mqqt_task, "mqqt_task", 8192, NULL, 5, &mqqtTaskHandle);
+    xTaskCreate(&mqtt_task, "mqtt_task", 8192, NULL, 5, &mqttTaskHandle);
 }

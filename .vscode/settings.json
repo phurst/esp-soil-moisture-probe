@@ -4,7 +4,9 @@
     "stdio.h": "c",
     "string.h": "c",
     "adc_cali_scheme.h": "c",
-    "mqqt_component.h": "c"
+    "mqtt_component.h": "c",
+    "esp_wifi.h": "c",
+    "cstdlib": "c"
   },
   "C_Cpp.intelliSenseEngine": "Tag Parser",
   "idf.portWin": "COM4",
