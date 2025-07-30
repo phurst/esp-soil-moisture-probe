@@ -21,7 +21,7 @@ void wifi_start(void);
 void wifi_stop(void);
 esp_err_t wifi_sta_do_connect(wifi_config_t wifi_config, bool wait);
 esp_err_t wifi_sta_do_disconnect(void);
-bool is_our_netif(const char *prefix, esp_netif_t *netif);
+bool is_our_netif(const char* prefix, esp_netif_t* netif);
 
 static void handler_on_wifi_connect(
   void* esp_netif,
@@ -90,6 +90,7 @@ void mqtt_connect(void) {
   if (err != ESP_OK) {
     printf("\nWiFi connect failed! ret:%x\n", err);
   }
+  ESP_ERROR_CHECK(wifi_sta_do_connect);
 
   void wifi_stop(void);
 }
@@ -152,20 +153,18 @@ esp_err_t wifi_sta_do_connect(wifi_config_t wifi_config, bool wait) {
   return ESP_OK;
 }
 
-esp_err_t wifi_sta_do_disconnect(void)
-{
-    ESP_ERROR_CHECK(esp_event_handler_unregister(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &handler_on_wifi_disconnect));
-    ESP_ERROR_CHECK(esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &handler_on_sta_got_ip));
-    ESP_ERROR_CHECK(esp_event_handler_unregister(WIFI_EVENT, WIFI_EVENT_STA_CONNECTED, &handler_on_wifi_connect));
-    if (s_semph_get_ip_addrs) {
-        vSemaphoreDelete(s_semph_get_ip_addrs);
-    }
-    return esp_wifi_disconnect();
+esp_err_t wifi_sta_do_disconnect(void) {
+  ESP_ERROR_CHECK(esp_event_handler_unregister(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &handler_on_wifi_disconnect));
+  ESP_ERROR_CHECK(esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &handler_on_sta_got_ip));
+  ESP_ERROR_CHECK(esp_event_handler_unregister(WIFI_EVENT, WIFI_EVENT_STA_CONNECTED, &handler_on_wifi_connect));
+  if (s_semph_get_ip_addrs) {
+    vSemaphoreDelete(s_semph_get_ip_addrs);
+  }
+  return esp_wifi_disconnect();
 }
 
-bool is_our_netif(const char *prefix, esp_netif_t *netif)
-{
-    return strncmp(prefix, esp_netif_get_desc(netif), strlen(prefix) - 1) == 0;
+bool is_our_netif(const char* prefix, esp_netif_t* netif) {
+  return strncmp(prefix, esp_netif_get_desc(netif), strlen(prefix) - 1) == 0;
 }
 
 static void handler_on_wifi_connect(
