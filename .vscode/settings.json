@@ -3,7 +3,12 @@
   "files.associations": {
     "stdio.h": "c",
     "string.h": "c",
-    "adc_cali_scheme.h": "c"
+    "adc_cali_scheme.h": "c",
+    "manager.h": "c",
+    "task.h": "c",
+    "compare": "c",
+    "cstdint": "c",
+    "wifi_component.h": "c"
   },
   "C_Cpp.intelliSenseEngine": "Tag Parser",
   "idf.portWin": "COM4",
