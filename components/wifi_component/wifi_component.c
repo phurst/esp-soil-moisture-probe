@@ -10,10 +10,11 @@
 #include <wifi_provisioning/scheme_ble.h>
 #include "esp_netif.h"
 #include "wifi_component.h"
+#include "salt_and_verifier.h"
+#include "qr_code.h"
 
-#define WIFI_LOOP_DELAY_MS                  5000
-#define EXAMPLE_PROV_SEC2_USERNAME          "wifiprov"
-#define EXAMPLE_PROV_SEC2_PWD               "abcd1234"
+#define WIFI_LOOP_DELAY_MS      4000
+#define PROV_TRANSPORT_BLE      "ble"
 
 /* Signal Wi-Fi events on this event-group */
 const int WIFI_CONNECTED_EVENT = BIT0;
@@ -104,12 +105,44 @@ static void wifi_init(void) {
 
     wifi_prov_security_t security = WIFI_PROV_SECURITY_2;
 
-    /* This pop field represents the password that will be used to generate salt and verifier.
-     * The field is present here in order to generate the QR code containing password.
-     * In production this password field shall not be stored on the device */
-    const char* username = EXAMPLE_PROV_SEC2_USERNAME;
-    const char* pop = EXAMPLE_PROV_SEC2_PWD;
+    wifi_prov_security2_params_t sec_params = get_prov_security2_params();
 
+    /* What is the service key (could be NULL)
+     * This translates to :
+     *     - Wi-Fi password when scheme is wifi_prov_scheme_softap
+     *          (Minimum expected length: 8, maximum 64 for WPA2-PSK)
+     *     - simply ignored when scheme is wifi_prov_scheme_ble
+     */
+    const char* service_key = NULL;
+
+#ifdef CONFIG_EXAMPLE_PROV_TRANSPORT_BLE
+    /* This step is only useful when scheme is wifi_prov_scheme_ble. This will
+     * set a custom 128 bit UUID which will be included in the BLE advertisement
+     * and will correspond to the primary GATT service that provides provisioning
+     * endpoints as GATT characteristics. Each GATT characteristic will be
+     * formed using the primary service UUID as base, with different auto assigned
+     * 12th and 13th bytes (assume counting starts from 0th byte). The client side
+     * applications must identify the endpoints by reading the User Characteristic
+     * Description descriptor (0x2901) for each characteristic, which contains the
+     * endpoint name of the characteristic */
+    uint8_t custom_service_uuid[] = {
+      /* LSB <---------------------------------------
+       * ---------------------------------------> MSB */
+      0xb4, 0xdf, 0x5a, 0x1c, 0x3f, 0x6b, 0xf4, 0xbf,
+      0xea, 0x4a, 0x82, 0x03, 0x04, 0x90, 0x1a, 0x02,
+    };
+
+    /* If your build fails with linker errors at this point, then you may have
+     * forgotten to enable the BT stack or BTDM BLE settings in the SDK (e.g. see
+     * the sdkconfig.defaults in the example project) */
+    wifi_prov_scheme_ble_set_service_uuid(custom_service_uuid);
+
+    /* Start provisioning service */
+    ESP_ERROR_CHECK(wifi_prov_mgr_start_provisioning(security, (const void*)&sec_params, service_name, service_key));
+
+    wifi_prov_print_qr(service_name, get_username(), get_pwd(), PROV_TRANSPORT_BLE);
+
+#endif /* CONFIG_EXAMPLE_PROV_TRANSPORT_BLE */
 
   } else {
     printf("\n+++++++++++++++++++++++++++++++ ALREADY PROVISIONED ++++++++++++++++++++++++++++++++++++\n");
