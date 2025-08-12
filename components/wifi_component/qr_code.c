@@ -14,6 +14,7 @@
 
 #define PROV_QR_VERSION         "v1"
 #define QRCODE_BASE_URL         "https://espressif.github.io/esp-jumpstart/qrcode.html"
+#define QR_CODE_DELAY_MS        100
 
 static const char* TAG = "qr_code";
 
@@ -45,4 +46,7 @@ void wifi_prov_print_qr(const char *name, const char *username, const char *pop,
     esp_qrcode_generate(&cfg, payload);
 #endif /* CONFIG_APP_WIFI_PROV_SHOW_QR */
     ESP_LOGI(TAG, "If QR code is not visible, copy paste the below URL in a browser.\n%s?data=%s", QRCODE_BASE_URL, payload);
+
+        /* Wait a bit to let the serial port calm down. */
+    vTaskDelay(QR_CODE_DELAY_MS / portTICK_PERIOD_MS);
 }

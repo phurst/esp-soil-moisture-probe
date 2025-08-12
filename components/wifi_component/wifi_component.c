@@ -11,14 +11,15 @@
 #include "esp_netif.h"
 #include "wifi_component.h"
 #include "salt_and_verifier.h"
+#include "device_service_name.h"
 #include "qr_code.h"
 
-#define WIFI_LOOP_DELAY_MS      4000
+#define WIFI_LOOP_DELAY_MS      1000
 #define PROV_TRANSPORT_BLE      "ble"
 
 /* Signal Wi-Fi events on this event-group */
 const int WIFI_CONNECTED_EVENT = BIT0;
-static EventGroupHandle_t wifi_event_group;
+static EventGroupHandle_t wifiEventGroup;
 
 static void wifi_init(void);
 
@@ -29,22 +30,13 @@ static void event_handler(
   void* event_data
 );
 
-static void get_device_service_name(
-  char* service_name,
-  size_t max
-);
-
 void wifi_task_function(
   void* pvParameters
 ) {
-  // /* Wait a bit to let the serial port calm down. */
-  // vTaskDelay(WIFI_STARTUP_DELAY_MS / portTICK_PERIOD_MS);
   wifi_init();
-  while (1) {
-
-    printf("\n++++++++++++++++++++++++ WIFI +++++++++++++++++++++++++++++\n");
-
+  while (true) {
     vTaskDelay(WIFI_LOOP_DELAY_MS / portTICK_PERIOD_MS);
+    printf("\n++++++++++++++++++++++++ WIFI LOOP +++++++++++++++++++++++++++++\n");
   }
 }
 
@@ -55,8 +47,8 @@ static void wifi_init(void) {
   ESP_ERROR_CHECK(esp_netif_init());
 
   /* Initialize the event loop */
-  ESP_ERROR_CHECK(esp_event_loop_create_default());
-  wifi_event_group = xEventGroupCreate();
+  // ESP_ERROR_CHECK(esp_event_loop_create_default());
+  wifiEventGroup = xEventGroupCreate();
 
   /* Register our event handler for Wi-Fi, IP and Provisioning related events */
   ESP_ERROR_CHECK(esp_event_handler_register(WIFI_PROV_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
@@ -147,7 +139,7 @@ static void wifi_init(void) {
   } else {
     printf("\n+++++++++++++++++++++++++++++++ ALREADY PROVISIONED ++++++++++++++++++++++++++++++++++++\n");
   }
-  printf("\n++++++++++++++++++++++++ WIFI INIT DONE +++++++++++++++++++++++++++++\n");
+  // printf("\n++++++++++++++++++++++++ WIFI INIT DONE +++++++++++++++++++++++++++++\n");
 }
 
 /* Event handler for catching system events */
@@ -159,16 +151,89 @@ static void event_handler(
 ) {
   if (event_base == WIFI_PROV_EVENT) {
     printf("\n++++++++++++++++++++++++ WIFI EVENT +++++++++++++++++++++++++++++ %ld \n", event_id);
+    switch (event_id) {
+    case WIFI_PROV_START:
+      printf("\n++++++++++++++++++++++++ Provisioning started +++++++++++++++++++++++++++++ \n");
+      break;
+    case WIFI_PROV_CRED_RECV: {
+      wifi_sta_config_t* wifi_sta_cfg = (wifi_sta_config_t*)event_data;
+      printf("\n++++++++++++++++++++++++Received Wi-Fi credentials"
+        "\n\tSSID     : %s\n\tPassword : %s\n",
+        (const char*)wifi_sta_cfg->ssid,
+        (const char*)wifi_sta_cfg->password);
+      break;
+    }
+    case WIFI_PROV_CRED_FAIL: {
+      wifi_prov_sta_fail_reason_t* reason = (wifi_prov_sta_fail_reason_t*)event_data;
+      printf("\n++++++++++++++++++++++++Provisioning failed!\n\tReason : %s"
+        "\n\tPlease reset to factory and retry provisioning\n",
+        (*reason == WIFI_PROV_STA_AUTH_ERROR) ?
+        "Wi-Fi station authentication failed" : "Wi-Fi access-point not found");
+#ifdef CONFIG_EXAMPLE_RESET_PROV_MGR_ON_FAILURE
+      /* Reset the state machine on provisioning failure.
+       * This is enabled by the CONFIG_EXAMPLE_RESET_PROV_MGR_ON_FAILURE configuration.
+       * It allows the provisioning manager to retry the provisioning process
+       * based on the number of attempts specified in wifi_conn_attempts. After attempting
+       * the maximum number of retries, the provisioning manager will reset the state machine
+       * and the provisioning process will be terminated.
+       */
+      wifi_prov_mgr_reset_sm_state_on_failure();
+#endif
+      break;
+    }
+    case WIFI_PROV_CRED_SUCCESS:
+      printf("\n++++++++++++++++++++++++ Provisioning successful +++++++++++++++++++++++++++++ \n");
+      break;
+    case WIFI_PROV_END:
+      /* De-initialize manager once provisioning is finished */
+      printf("\n++++++++++++++++++++++++ Provisioning end +++++++++++++++++++++++++++++ \n");
+      wifi_prov_mgr_deinit();
+      break;
+    default:
+      break;
+    }
+  } else if (event_base == WIFI_EVENT) {
+    switch (event_id) {
+      case WIFI_EVENT_STA_START:
+        esp_wifi_connect();
+        break;
+      case WIFI_EVENT_STA_DISCONNECTED:
+        printf("\n++++++++++++++++++++++++ Disconnected. Connecting to the AP again... +++++++++++++++++++++++++++++ \n");
+        esp_wifi_connect();
+        break;
+      default:
+        break;
+    }
+  } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+    ip_event_got_ip_t* event = (ip_event_got_ip_t*)event_data;
+    printf("\n++++++++++++++++++++++++ Connected with IP Address:" IPSTR, IP2STR(&event->ip_info.ip));
+    /* Signal main application to continue execution */
+    xEventGroupSetBits(wifiEventGroup, WIFI_CONNECTED_EVENT);
+  } else if (event_base == PROTOCOMM_TRANSPORT_BLE_EVENT) {
+    switch (event_id) {
+    case PROTOCOMM_TRANSPORT_BLE_CONNECTED:
+      printf("\n++++++++++++++++++++++++BLE transport: Connected!\n");
+      break;
+    case PROTOCOMM_TRANSPORT_BLE_DISCONNECTED:
+      printf("\n++++++++++++++++++++++++BLE transport: Disconnected!\n");
+      break;
+    default:
+      break;
+    }
+  } else if (event_base == PROTOCOMM_SECURITY_SESSION_EVENT) {
+    switch (event_id) {
+    case PROTOCOMM_SECURITY_SESSION_SETUP_OK:
+      printf("\n++++++++++++++++++++++++Secured session established!\n");
+      break;
+    case PROTOCOMM_SECURITY_SESSION_INVALID_SECURITY_PARAMS:
+      printf("\n++++++++++++++++++++++++Received invalid security parameters for establishing secure session!\n");
+      break;
+    case PROTOCOMM_SECURITY_SESSION_CREDENTIALS_MISMATCH:
+      printf("\n++++++++++++++++++++++++Received incorrect username and/or PoP for establishing secure session!\n");
+      break;
+    default:
+      break;
+    }
   }
 }
 
-static void get_device_service_name(
-  char* service_name,
-  size_t max
-) {
-  uint8_t eth_mac[6];
-  const char* ssid_prefix = "PROV_";
-  esp_wifi_get_mac(WIFI_IF_STA, eth_mac);
-  snprintf(service_name, max, "%s%02X%02X%02X",
-    ssid_prefix, eth_mac[3], eth_mac[4], eth_mac[5]);
-}

@@ -84,7 +84,7 @@ void sensor_tear_down(void) {
 ---------------------------------------------------------------*/
 static bool adc_calibration_init(adc_unit_t unit, adc_channel_t channel, adc_atten_t atten, adc_cali_handle_t* out_handle) {
   adc_cali_handle_t handle = NULL;
-  esp_err_t ret = ESP_FAIL;
+  esp_err_t err = ESP_FAIL;
   bool calibrated = false;
 
 #if ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED
@@ -96,8 +96,8 @@ static bool adc_calibration_init(adc_unit_t unit, adc_channel_t channel, adc_att
         .atten = atten,
         .bitwidth = ADC_BITWIDTH_DEFAULT,
     };
-    ret = adc_cali_create_scheme_curve_fitting(&cali_config, &handle);
-    if (ret == ESP_OK) {
+    err = adc_cali_create_scheme_curve_fitting(&cali_config, &handle);
+    if (err == ESP_OK) {
       calibrated = true;
     }
   }
@@ -111,17 +111,17 @@ static bool adc_calibration_init(adc_unit_t unit, adc_channel_t channel, adc_att
         .atten = atten,
         .bitwidth = ADC_BITWIDTH_DEFAULT,
     };
-    ret = adc_cali_create_scheme_line_fitting(&cali_config, &handle);
-    if (ret == ESP_OK) {
+    err = adc_cali_create_scheme_line_fitting(&cali_config, &handle);
+    if (err == ESP_OK) {
       calibrated = true;
     }
   }
 #endif
 
   * out_handle = handle;
-  if (ret == ESP_OK) {
+  if (err == ESP_OK) {
     printf("Calibration Success");
-  } else if (ret == ESP_ERR_NOT_SUPPORTED || !calibrated) {
+  } else if (err == ESP_ERR_NOT_SUPPORTED || !calibrated) {
     ESP_LOGW(TAG, "eFuse not burnt, skip software calibration");
   } else {
     ESP_LOGE(TAG, "Invalid arg or no memory");
